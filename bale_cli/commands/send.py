@@ -6,6 +6,7 @@ import click
 from rich.console import Console
 
 from bale_cli.utils import output
+from bale_cli.aiobale_patch import patch_aiobale
 
 console = Console()
 
@@ -57,11 +58,13 @@ def send_text(recipient, message, reply_to, store, json_output):
     from aiobale.enums import ChatType
 
     async def _send():
+        patch_aiobale()
+
         dp = Dispatcher()
         client = Client(dp, session_file=session_file)
 
         try:
-            await client.start(run_in_background=True)
+            await client.start(run_in_background=True, signal_handling=False)
 
             chat_id = _resolve_chat_id(client, recipient, ChatType)
 
@@ -111,11 +114,13 @@ def send_file(recipient, file_path, caption, store, json_output):
     from aiobale.enums import ChatType
 
     async def _send():
+        patch_aiobale()
+
         dp = Dispatcher()
         client = Client(dp, session_file=session_file)
 
         try:
-            await client.start(run_in_background=True)
+            await client.start(run_in_background=True, signal_handling=False)
 
             chat_id = _resolve_chat_id(client, recipient, ChatType)
 
@@ -167,11 +172,13 @@ def send_reaction(chat, message, emoji, store, json_output):
     from aiobale.types import OtherMessage
 
     async def _send():
+        patch_aiobale()
+
         dp = Dispatcher()
         client = Client(dp, session_file=session_file)
 
         try:
-            await client.start(run_in_background=True)
+            await client.start(run_in_background=True, signal_handling=False)
 
             try:
                 msg_obj = OtherMessage.model_construct()

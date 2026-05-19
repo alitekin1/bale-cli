@@ -6,6 +6,7 @@ from rich.console import Console
 
 from bale_cli.store import Store
 from bale_cli.utils import output
+from bale_cli.aiobale_patch import patch_aiobale
 
 console = Console()
 
@@ -44,6 +45,8 @@ def auth_login(phone, store, json_output):
     phone_clean = to_ascii_digits(phone).replace("+", "").replace(" ", "")
 
     async def _login():
+        patch_aiobale()
+
         dp = Dispatcher()
         client = Client(dp, session_file=session_file)
 

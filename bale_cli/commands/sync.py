@@ -9,6 +9,7 @@ from rich.console import Console
 
 from bale_cli.store import Store
 from bale_cli.utils import output, emit_event
+from bale_cli.aiobale_patch import patch_aiobale
 
 console = Console()
 
@@ -41,6 +42,8 @@ def start(follow, limit, store, json_output, events, media):
         sys.exit(1)
 
     async def _sync():
+        patch_aiobale()
+
         from aiobale import Client, Dispatcher
         from aiobale.types import Message
         from aiobale.enums import ChatType
@@ -133,7 +136,7 @@ def start(follow, limit, store, json_output, events, media):
                 stop_event.set()
 
         try:
-            await client.start(run_in_background=True)
+            await client.start(run_in_background=True, signal_handling=False)
 
             dialogs = []
             try:
@@ -141,6 +144,59 @@ def start(follow, limit, store, json_output, events, media):
             except Exception as e:
                 console.print(f"[yellow]Warning: Could not load dialogs: {e}[/yellow]")
                 console.print("[dim]Continuing with live sync only (follow mode will still work)[/dim]")
+
+            if not dialogs:
+                stored_chats = await db.get_chats(limit=500)
+                if stored_chats:
+                    console.print(f"[dim]Using {len(stored_chats)} stored chats for history sync[/dim]")
+                    for chat in stored_chats:
+                        chat_id = chat.get("peer_id")
+                        peer_type = chat.get("peer_type", "private")
+                        type_map = {
+                            "private": ChatType.PRIVATE,
+                            "group": ChatType.GROUP,
+                            "channel": ChatType.CHANNEL,
+                            "super_group": ChatType.SUPER_GROUP,
+                            "bot": ChatType.BOT,
+                        }
+                        ct = type_map.get(peer_type, ChatType.PRIVATE)
+
+                        try:
+                            history = await client.load_history(
+                                chat_id=chat_id,
+                                chat_type=ct,
+                                limit=50,
+                            )
+                            for h_msg in history:
+                                sender_id = h_msg.sender_id
+                                sender_name = await get_sender_name(sender_id)
+
+                                media_info = {}
+                                if h_msg.document:
+                                    media_info = {
+                                        "type": "document",
+                                        "file_id": h_msg.document.file_id,
+                                        "mime_type": h_msg.document.mime_type,
+                                        "file_size": h_msg.document.size,
+                                    }
+
+                                await db.insert_message(
+                                    message_id=h_msg.message_id,
+                                    chat_id=chat_id,
+                                    peer_id=chat_id,
+                                    peer_type=peer_type,
+                                    text=h_msg.text or "",
+                                    sender_id=sender_id,
+                                    sender_name=sender_name,
+                                    message_type=media_info.get("type", "text"),
+                                    date=h_msg.date,
+                                    media_file_id=str(media_info.get("file_id")) if media_info.get("file_id") else None,
+                                    media_mime_type=media_info.get("mime_type"),
+                                    media_file_size=media_info.get("file_size"),
+                                )
+                                msg_count += 1
+                        except Exception as e:
+                            console.print(f"[dim]Failed to load history for {chat_id}: {e}[/dim]")
 
             for dialog in dialogs:
                 peer = dialog.peer

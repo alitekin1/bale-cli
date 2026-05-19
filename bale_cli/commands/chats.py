@@ -6,6 +6,7 @@ from rich.console import Console
 
 from bale_cli.store import Store
 from bale_cli.utils import output
+from bale_cli.aiobale_patch import patch_aiobale
 
 console = Console()
 
@@ -82,11 +83,13 @@ def chats_live(limit, store, json_output):
     from aiobale import Client, Dispatcher
 
     async def _live():
+        patch_aiobale()
+
         dp = Dispatcher()
         client = Client(dp, session_file=session_file)
 
         try:
-            await client.start(run_in_background=True)
+            await client.start(run_in_background=True, signal_handling=False)
 
             db = Store(store_dir)
             await db.init()

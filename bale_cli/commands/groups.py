@@ -6,6 +6,7 @@ from rich.console import Console
 
 from bale_cli.store import Store
 from bale_cli.utils import output
+from bale_cli.aiobale_patch import patch_aiobale
 
 console = Console()
 
@@ -84,11 +85,13 @@ def groups_info(group_id, store, json_output):
     from aiobale.types import Peer
 
     async def _info():
+        patch_aiobale()
+
         dp = Dispatcher()
         client = Client(dp, session_file=session_file)
 
         try:
-            await client.start(run_in_background=True)
+            await client.start(run_in_background=True, signal_handling=False)
 
             try:
                 peer = Peer(id=group_id, type=ChatType.GROUP)
@@ -137,11 +140,13 @@ def groups_members(group_id, limit, store, json_output):
     from aiobale.types import Peer
 
     async def _members():
+        patch_aiobale()
+
         dp = Dispatcher()
         client = Client(dp, session_file=session_file)
 
         try:
-            await client.start(run_in_background=True)
+            await client.start(run_in_background=True, signal_handling=False)
 
             try:
                 peer = Peer(id=group_id, type=ChatType.GROUP)
