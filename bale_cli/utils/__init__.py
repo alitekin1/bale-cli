@@ -1,12 +1,27 @@
 import json
 import os
 import sys
+from pathlib import Path
 from typing import Any
 
 from rich.console import Console
 from rich.table import Table
 
 console = Console()
+
+
+def get_session_path(store_dir: Path, profile: str = None) -> Path:
+    """Get session file path, optionally with profile name."""
+    if profile:
+        return store_dir / f"session_{profile}.bale"
+    return store_dir / "session.bale"
+
+
+def get_db_path(store_dir: Path, profile: str = None) -> Path:
+    """Get database file path, optionally with profile name."""
+    if profile:
+        return store_dir / f"bale_{profile}.db"
+    return store_dir / "bale.db"
 
 
 def output_json(data: Any, full: bool = False):
