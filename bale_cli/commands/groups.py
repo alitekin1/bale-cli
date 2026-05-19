@@ -32,9 +32,9 @@ def groups_list(channels, groups_only, limit, store, json_output):
         is_channel = True if channels else (False if groups_only else None)
         results = await db.get_groups(limit=limit, is_channel=is_channel)
         if json_output:
-            output(results)
+            output(results, json_mode=True)
         else:
-            output(results, title="Groups & Channels", columns=["peer_id", "title", "member_count", "is_channel"])
+            output(results, json_mode=False, title="Groups & Channels", columns=["peer_id", "title", "member_count", "is_channel"])
 
     asyncio.run(_list())
 
@@ -58,9 +58,9 @@ def groups_search(query, limit, store, json_output):
             if query_lower in (g.get("title") or "").lower()
         ]
         if json_output:
-            output(results)
+            output(results, json_mode=True)
         else:
-            output(results, title=f"Groups matching '{query}'", columns=["peer_id", "title", "member_count"])
+            output(results, json_mode=False, title=f"Groups matching '{query}'", columns=["peer_id", "title", "member_count"])
 
     asyncio.run(_search())
 
@@ -103,7 +103,7 @@ def groups_info(group_id, store, json_output):
                 }
 
                 if json_output:
-                    output(group_info)
+                    output(group_info, json_mode=True)
                 else:
                     console.print(f"[bold]{group_info['title']}[/bold] (ID: {group_id})")
                     console.print(f"Members: {group_info['member_count']}")
@@ -157,9 +157,9 @@ def groups_members(group_id, limit, store, json_output):
                     })
 
                 if json_output:
-                    output(member_list)
+                    output(member_list, json_mode=True)
                 else:
-                    output(member_list, title=f"Members of {group_id}", columns=["id", "name", "is_admin"])
+                    output(member_list, json_mode=False, title=f"Members of {group_id}", columns=["id", "name", "is_admin"])
             except Exception as e:
                 console.print(f"[red]Failed to load members: {e}[/red]")
         finally:

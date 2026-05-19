@@ -41,12 +41,12 @@ def messages_search(query, chat, sender, msg_type, limit, offset, store, json_ou
         )
 
         if json_output:
-            output(results)
+            output(results, json_mode=True)
         else:
             columns = ["message_id", "chat_title", "sender_name", "text", "date"]
             if full:
                 columns = list(results[0].keys()) if results else columns
-            output(results, title=f"Search: {query}", columns=columns)
+            output(results, json_mode=False, title=f"Search: {query}", columns=columns)
 
     asyncio.run(_search())
 
@@ -73,12 +73,12 @@ def messages_list(chat, limit, offset, store, json_output, full):
         )
 
         if json_output:
-            output(results)
+            output(results, json_mode=True)
         else:
             columns = ["message_id", "chat_title", "sender_name", "text", "date"]
             if full:
                 columns = list(results[0].keys()) if results else columns
-            output(results, title="Messages", columns=columns)
+            output(results, json_mode=False, title="Messages", columns=columns)
 
     asyncio.run(_list())
 
@@ -95,7 +95,7 @@ def messages_count(store, json_output):
         await db.init()
         count = await db.message_count()
         if json_output:
-            output({"total_messages": count})
+            output({"total_messages": count}, json_mode=True)
         else:
             console.print(f"Total messages: [bold]{count}[/bold]")
 

@@ -29,9 +29,9 @@ def contacts_list(limit, store, json_output):
         await db.init()
         results = await db.get_contacts(limit=limit)
         if json_output:
-            output(results)
+            output(results, json_mode=True)
         else:
-            output(results, title="Contacts", columns=["peer_id", "first_name", "last_name", "phone"])
+            output(results, json_mode=False, title="Contacts", columns=["peer_id", "first_name", "last_name", "phone"])
 
     asyncio.run(_list())
 
@@ -58,9 +58,9 @@ def contacts_search(query, limit, store, json_output):
             or query_lower in (c.get("username") or "").lower()
         ]
         if json_output:
-            output(results)
+            output(results, json_mode=True)
         else:
-            output(results, title=f"Contacts matching '{query}'", columns=["peer_id", "first_name", "last_name", "phone"])
+            output(results, json_mode=False, title=f"Contacts matching '{query}'", columns=["peer_id", "first_name", "last_name", "phone"])
 
     asyncio.run(_search())
 
@@ -106,10 +106,18 @@ def contacts_live(limit, store, json_output):
                     }
                     results.append(contact)
 
+                    await db.upsert_contact(
+                        peer_id=contact["peer_id"],
+                        first_name=contact["first_name"] or "",
+                        last_name=contact["last_name"] or "",
+                        phone=contact["phone"] or "",
+                        username=contact["username"] or "",
+                    )
+
                 if json_output:
-                    output(results)
+                    output(results, json_mode=True)
                 else:
-                    output(results, title="Live Contacts", columns=["peer_id", "first_name", "last_name", "phone"])
+                    output(results, json_mode=False, title="Live Contacts", columns=["peer_id", "first_name", "last_name", "phone"])
             except Exception as e:
                 console.print(f"[red]Failed to fetch contacts: {e}[/red]")
         finally:

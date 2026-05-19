@@ -135,12 +135,13 @@ def start(follow, limit, store, json_output, events, media):
         try:
             await client.start(run_in_background=True)
 
+            dialogs = []
             try:
                 dialogs = await client.load_dialogs(limit=200)
             except Exception as e:
                 console.print(f"[yellow]Warning: Could not load dialogs: {e}[/yellow]")
                 console.print("[dim]Continuing with live sync only (follow mode will still work)[/dim]")
-                dialogs = []
+
             for dialog in dialogs:
                 peer = dialog.peer
                 chat_id = peer.id
@@ -158,6 +159,8 @@ def start(follow, limit, store, json_output, events, media):
                 await db.upsert_chat(
                     peer_id=chat_id,
                     peer_type=peer_type,
+                    title=getattr(dialog, "title", None),
+                    username=getattr(dialog, "username", None),
                     last_message_date=dialog.date,
                 )
 
@@ -199,7 +202,7 @@ def start(follow, limit, store, json_output, events, media):
                     console.print(f"[dim]Failed to load history for {chat_id}: {e}[/dim]")
 
             if json_output:
-                output({"status": "synced", "messages": msg_count})
+                output({"status": "synced", "messages": msg_count}, json_mode=True)
             else:
                 console.print(f"[green]Synced {msg_count} messages[/green]")
 
@@ -212,7 +215,7 @@ def start(follow, limit, store, json_output, events, media):
 
         total = await db.message_count()
         if json_output:
-            output({"status": "complete", "total_messages": total})
+            output({"status": "complete", "total_messages": total}, json_mode=True)
         else:
             console.print(f"[green]Done. Total messages in store: {total}[/green]")
 

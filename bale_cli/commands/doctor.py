@@ -66,7 +66,7 @@ def doctor(store, json_output):
 
         if json_output:
             from bale_cli.utils import output
-            output(checks)
+            output(checks, json_mode=True)
         else:
             table = Table(title="bale-cli Doctor")
             table.add_column("Check", style="cyan")

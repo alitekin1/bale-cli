@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 from typing import Any
 
@@ -28,12 +29,44 @@ def output_table(rows: list[dict], title: str = None, columns: list[str] = None)
     if columns is None:
         columns = list(rows[0].keys())
 
-    table = Table(title=title)
+    try:
+        term_width = os.get_terminal_size().columns
+    except OSError:
+        term_width = 80
+
+    if len(columns) > 6 or sum(len(c) for c in columns) > term_width - 10:
+        for i, row in enumerate(rows):
+            if title and i == 0:
+                console.print(f"[bold]{title}[/bold]")
+            console.print(f"[dim]--- Row {i+1} ---[/dim]")
+            for col in columns:
+                val = row.get(col, "")
+                if val is None:
+                    val = "None"
+                elif isinstance(val, (dict, list)):
+                    val = str(val)[:100]
+                else:
+                    val = str(val)[:200]
+                header = col.replace("_", " ").title()
+                console.print(f"  [cyan]{header}:[/cyan] {val}")
+        return
+
+    table = Table(title=title, show_header=True, header_style="bold cyan")
     for col in columns:
-        table.add_column(col, overflow="fold")
+        header = col.replace("_", " ").title()
+        table.add_column(header, overflow="fold", max_width=30, no_wrap=False)
 
     for row in rows:
-        table.add_row(*[str(row.get(c, "")) for c in columns])
+        values = []
+        for c in columns:
+            val = row.get(c, "")
+            if val is None:
+                values.append("")
+            elif isinstance(val, (dict, list)):
+                values.append(str(val)[:100])
+            else:
+                values.append(str(val)[:200])
+        table.add_row(*values)
 
     console.print(table)
 

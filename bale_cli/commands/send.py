@@ -1,4 +1,5 @@
 import asyncio
+import re
 from pathlib import Path
 
 import click
@@ -13,6 +14,28 @@ console = Console()
 def send():
     """Send messages, files, and reactions."""
     pass
+
+
+def _resolve_chat_id(client, recipient, ChatType):
+    clean = recipient.lstrip("+").strip()
+    if clean.isdigit():
+        return int(clean)
+    return None
+
+
+async def _find_chat_by_dialogs(client, recipient):
+    try:
+        dialogs = await client.load_dialogs(limit=200)
+        for d in dialogs:
+            title = getattr(d, "title", "") or ""
+            if title.lower() == recipient.lower():
+                return d.peer.id
+            username = getattr(d, "username", "") or ""
+            if username and username.lower() == recipient.lower():
+                return d.peer.id
+    except Exception:
+        pass
+    return None
 
 
 @send.command("text")
@@ -33,8 +56,6 @@ def send_text(recipient, message, reply_to, store, json_output):
     from aiobale import Client, Dispatcher
     from aiobale.enums import ChatType
 
-    chat_id = int(recipient) if recipient.isdigit() else None
-
     async def _send():
         dp = Dispatcher()
         client = Client(dp, session_file=session_file)
@@ -42,16 +63,13 @@ def send_text(recipient, message, reply_to, store, json_output):
         try:
             await client.start(run_in_background=True)
 
-            if chat_id is None:
-                dialogs = await client.load_dialogs(limit=200)
-                for d in dialogs:
-                    title = getattr(d, "title", "") or ""
-                    if title.lower() == recipient.lower():
-                        chat_id = d.peer.id
-                        break
+            chat_id = _resolve_chat_id(client, recipient, ChatType)
 
             if chat_id is None:
-                console.print(f"[red]Chat '{recipient}' not found.[/red]")
+                chat_id = await _find_chat_by_dialogs(client, recipient)
+
+            if chat_id is None:
+                console.print(f"[red]Chat '{recipient}' not found. Use a numeric chat ID.[/red]")
                 return
 
             chat_type = ChatType.PRIVATE
@@ -63,7 +81,7 @@ def send_text(recipient, message, reply_to, store, json_output):
                 )
 
                 if json_output:
-                    output({"status": "sent", "message_id": result.message_id, "chat_id": chat_id})
+                    output({"status": "sent", "message_id": result.message_id, "chat_id": chat_id}, json_mode=True)
                 else:
                     console.print(f"[green]Sent[/green] to {chat_id} (ID: {result.message_id})")
             except Exception as e:
@@ -92,8 +110,6 @@ def send_file(recipient, file_path, caption, store, json_output):
     from aiobale import Client, Dispatcher
     from aiobale.enums import ChatType
 
-    chat_id = int(recipient) if recipient.isdigit() else None
-
     async def _send():
         dp = Dispatcher()
         client = Client(dp, session_file=session_file)
@@ -101,16 +117,13 @@ def send_file(recipient, file_path, caption, store, json_output):
         try:
             await client.start(run_in_background=True)
 
-            if chat_id is None:
-                dialogs = await client.load_dialogs(limit=200)
-                for d in dialogs:
-                    title = getattr(d, "title", "") or ""
-                    if title.lower() == recipient.lower():
-                        chat_id = d.peer.id
-                        break
+            chat_id = _resolve_chat_id(client, recipient, ChatType)
 
             if chat_id is None:
-                console.print(f"[red]Chat '{recipient}' not found.[/red]")
+                chat_id = await _find_chat_by_dialogs(client, recipient)
+
+            if chat_id is None:
+                console.print(f"[red]Chat '{recipient}' not found. Use a numeric chat ID.[/red]")
                 return
 
             console.print(f"[dim]Sending {file_path} to {chat_id}...[/dim]")
@@ -123,7 +136,7 @@ def send_file(recipient, file_path, caption, store, json_output):
                 )
 
                 if json_output:
-                    output({"status": "sent", "message_id": result.message_id, "file": str(file_path)})
+                    output({"status": "sent", "message_id": result.message_id, "file": str(file_path)}, json_mode=True)
                 else:
                     console.print(f"[green]Sent file[/green] {file_path} to {chat_id}")
             except Exception as e:
@@ -151,6 +164,7 @@ def send_reaction(chat, message, emoji, store, json_output):
 
     from aiobale import Client, Dispatcher
     from aiobale.enums import ChatType
+    from aiobale.types import OtherMessage
 
     async def _send():
         dp = Dispatcher()
@@ -160,14 +174,19 @@ def send_reaction(chat, message, emoji, store, json_output):
             await client.start(run_in_background=True)
 
             try:
+                msg_obj = OtherMessage.model_construct()
+                msg_obj.message_id = message
+                msg_obj.date = 0
+
                 reactions = await client.set_reaction(
                     emojy=emoji,
+                    message=msg_obj,
                     chat_id=chat,
                     chat_type=ChatType.PRIVATE,
                 )
 
                 if json_output:
-                    output({"status": "reacted", "message_id": message, "emoji": emoji})
+                    output({"status": "reacted", "message_id": message, "emoji": emoji}, json_mode=True)
                 else:
                     console.print(f"[green]Reacted[/green] {emoji} on message {message}")
             except Exception as e:

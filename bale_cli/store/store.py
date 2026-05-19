@@ -150,6 +150,21 @@ class Store:
             """, (peer_id, peer_type, title, username, kwargs.get("last_message_date", 0)))
             await db.commit()
 
+    async def upsert_contact(self, peer_id: int, first_name: str = None,
+                             last_name: str = None, phone: str = None,
+                             username: str = None, **kwargs):
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute("""
+                INSERT INTO contacts (peer_id, first_name, last_name, phone, username)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(peer_id) DO UPDATE SET
+                    first_name=COALESCE(excluded.first_name, contacts.first_name),
+                    last_name=COALESCE(excluded.last_name, contacts.last_name),
+                    phone=COALESCE(excluded.phone, contacts.phone),
+                    username=COALESCE(excluded.username, contacts.username)
+            """, (peer_id, first_name, last_name, phone, username))
+            await db.commit()
+
     async def insert_message(self, message_id: int, chat_id: int, peer_id: int,
                              peer_type: str, text: str = None, sender_id: int = None,
                              sender_name: str = None, message_type: str = "text",

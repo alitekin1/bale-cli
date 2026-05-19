@@ -83,7 +83,7 @@ def auth_login(phone, store, json_output):
             user_id = me.id if me else "Unknown"
 
             if json_output:
-                output({"status": "success", "user": {"id": user_id, "name": user_name}})
+                output({"status": "success", "user": {"id": user_id, "name": user_name}}, json_mode=True)
             else:
                 console.print(f"[green]Login successful![/green] Welcome, [bold]{user_name}[/bold] (ID: {user_id})")
 
@@ -103,12 +103,12 @@ def auth_status(store, json_output):
 
     if session_file.exists():
         if json_output:
-            output({"authenticated": True, "session": str(session_file)})
+            output({"authenticated": True, "session": str(session_file)}, json_mode=True)
         else:
             console.print(f"[green]Authenticated[/green] — Session: {session_file}")
     else:
         if json_output:
-            output({"authenticated": False})
+            output({"authenticated": False}, json_mode=True)
         else:
             console.print("[red]Not authenticated[/red] — Run [bold]bale auth login[/bold]")
 

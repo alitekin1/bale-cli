@@ -31,9 +31,9 @@ def chats_list(limit, offset, chat_type, store, json_output):
         await db.init()
         results = await db.get_chats(limit=limit, offset=offset, peer_type=chat_type)
         if json_output:
-            output(results)
+            output(results, json_mode=True)
         else:
-            output(results, title="Chats", columns=["peer_id", "peer_type", "title", "last_message_date"])
+            output(results, json_mode=False, title="Chats", columns=["peer_id", "peer_type", "title", "last_message_date"])
 
     asyncio.run(_list())
 
@@ -59,9 +59,9 @@ def chats_search(query, limit, store, json_output):
             or query_lower in (c.get("local_name") or "").lower()
         ]
         if json_output:
-            output(results)
+            output(results, json_mode=True)
         else:
-            output(results, title=f"Chats matching '{query}'", columns=["peer_id", "peer_type", "title"])
+            output(results, json_mode=False, title=f"Chats matching '{query}'", columns=["peer_id", "peer_type", "title"])
 
     asyncio.run(_search())
 
@@ -91,32 +91,37 @@ def chats_live(limit, store, json_output):
             db = Store(store_dir)
             await db.init()
 
+            dialogs = []
             try:
                 dialogs = await client.load_dialogs(limit=limit)
             except Exception as e:
-                console.print(f"[red]Failed to load dialogs: {e}[/red]")
+                console.print(f"[yellow]Warning: Could not load dialogs: {e}[/yellow]")
                 console.print("[dim]This may be due to an aiobale parsing bug with inline keyboards.[/dim]")
-                return
+
             results = []
             for d in dialogs:
                 peer = d.peer
                 chat_data = {
                     "peer_id": peer.id,
                     "peer_type": peer.type.name.lower() if hasattr(peer.type, "name") else str(peer.type),
-                    "unread_count": d.unread_count if hasattr(d, "unread_count") else 0,
+                    "title": getattr(d, "title", None),
+                    "username": getattr(d, "username", None),
+                    "unread_count": getattr(d, "unread_count", 0),
                 }
                 results.append(chat_data)
 
                 await db.upsert_chat(
                     peer_id=peer.id,
                     peer_type=chat_data["peer_type"],
+                    title=chat_data["title"],
+                    username=chat_data["username"],
                     last_message_date=d.date if hasattr(d, "date") else 0,
                 )
 
             if json_output:
-                output(results)
+                output(results, json_mode=True)
             else:
-                output(results, title="Live Chats", columns=["peer_id", "peer_type", "unread_count"])
+                output(results, json_mode=False, title="Live Chats", columns=["peer_id", "peer_type", "title", "unread_count"])
         finally:
             await client.stop()
 
