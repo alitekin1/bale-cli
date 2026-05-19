@@ -97,9 +97,15 @@ def chats_live(limit, store, json_output):
             dialogs = []
             try:
                 dialogs = await client.load_dialogs(limit=limit)
-            except Exception as e:
+            except (KeyError, Exception) as e:
                 console.print(f"[yellow]Warning: Could not load dialogs: {e}[/yellow]")
-                console.print("[dim]This may be due to an aiobale parsing bug with inline keyboards.[/dim]")
+                console.print("[dim]Falling back to stored chats[/dim]")
+                results = await db.get_chats(limit=limit)
+                if json_output:
+                    output(results, json_mode=True)
+                else:
+                    output(results, json_mode=False, title="Stored Chats", columns=["peer_id", "peer_type", "title", "last_message_date"])
+                return
 
             results = []
             for d in dialogs:

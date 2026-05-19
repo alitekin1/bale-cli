@@ -100,5 +100,39 @@ def patch_aiobale():
 
         Client.start = patched_start
 
+        try:
+            from aiobale.types.inline_keyboard import InlineKeyboardButton, InlineKeyboardMarkup
+
+            @classmethod
+            def patched_validate_button(cls, data):
+                if isinstance(data, dict) and "1" in data:
+                    for i in ("2", "3", "9"):
+                        if i not in data:
+                            continue
+                        if isinstance(data[i], dict) and "1" in data[i]:
+                            data[i] = data[i]["1"]
+                return data
+
+            InlineKeyboardButton.validate_keyboard = patched_validate_button
+
+        except ImportError:
+            pass
+
+        try:
+            from aiobale.types.peer_data import PeerData
+
+            @classmethod
+            def patched_normalize_peer_data(cls, data):
+                if "9" in data and isinstance(data["9"], dict):
+                    data["9"] = data["9"].get("1", 0)
+                if "13" in data and isinstance(data["13"], dict):
+                    data["13"] = data["13"].get("1", 0)
+                return data
+
+            PeerData.normalize_nested_fields = patched_normalize_peer_data
+
+        except ImportError:
+            pass
+
     except ImportError:
         pass

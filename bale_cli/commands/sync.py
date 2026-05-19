@@ -141,9 +141,9 @@ def start(follow, limit, store, json_output, events, media):
             dialogs = []
             try:
                 dialogs = await client.load_dialogs(limit=200)
-            except Exception as e:
+            except (KeyError, Exception) as e:
                 console.print(f"[yellow]Warning: Could not load dialogs: {e}[/yellow]")
-                console.print("[dim]Continuing with live sync only (follow mode will still work)[/dim]")
+                console.print("[dim]Continuing with stored chats + live sync[/dim]")
 
             if not dialogs:
                 stored_chats = await db.get_chats(limit=500)

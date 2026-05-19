@@ -34,7 +34,7 @@ async def _find_chat_by_dialogs(client, recipient):
             username = getattr(d, "username", "") or ""
             if username and username.lower() == recipient.lower():
                 return d.peer.id
-    except Exception:
+    except (KeyError, Exception):
         pass
     return None
 
